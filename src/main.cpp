@@ -97,7 +97,6 @@ int main() {
           // convert ptsx and ptsy to car coordinate system
           Eigen::VectorXd ptsx_cc(ptsx.size());
           Eigen::VectorXd ptsy_cc(ptsy.size());
-
           for (int i=0; i<ptsx.size(); i++){
               double x = ptsx[i]-px;
               double y = ptsy[i]-py;
@@ -105,29 +104,28 @@ int main() {
               ptsy_cc[i] = x*std::sin(-psi)+y*std::cos(-psi);
           }
 
-          double steer_value;
-          double throttle_value;
-
           // fit a 3rd order polynomial to the above ptsx_cc and ptsy_cc coordinates
           auto coeffs = polyfit(ptsx_cc, ptsy_cc, 3);
-          // Todo: prediction nochmal ankucken
           // predict state to account for latency
+          double latency = 0.1;
+          double Lf = 2.67;
+          double x_pred =v*latency;
+          double psi_pred=-v*steering*latency/Lf;
+          // calculate the cross track error
+          double cte = polyeval(coeffs, x_pred);
+          // calculate the orientation error
+          double epsi = -atan(coeffs[1]+2*coeffs[2]*x_pred+3*coeffs[3]*x_pred*x_pred);
+
+          // define state after passed latency
           Eigen::VectorXd state(6);
-            double latency = 0.1;
-            double Lf = 2.67;
-
-            double x_pred =v*latency;
-            double psi_pred=-v*steering*latency/Lf;
-            // calculate the cross track error
-            double cte = polyeval(coeffs, x_pred);
-            // calculate the orientation error
-            double epsi = -atan(coeffs[1]+2*coeffs[2]*x_pred+3*coeffs[3]*x_pred*x_pred);
-
-
           state << x_pred, 0, psi_pred, v, cte, epsi;
 
+          // solve
           auto solution = mpc.Solve(state, coeffs);
 
+          // assign steering and throttle values
+          double steer_value;
+          double throttle_value;
           steer_value = -1*solution[0]/deg2rad(25);
           throttle_value = solution[1];
 

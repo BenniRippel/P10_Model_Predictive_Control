@@ -5,7 +5,6 @@
 
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
 size_t N = 20;
 double dt = 0.1;
 
@@ -14,18 +13,8 @@ double scale_cte = 1;
 double scale_delta_diff = 500;
 double scale_a_diff=1;
 
-double ref_v=60*0.44704;
+double ref_v=70*0.44704;
 
-
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 
@@ -41,8 +30,6 @@ size_t epsi_start = cte_start + N;
 size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
 
-
-
 class FG_eval {
 public:
     // Fitted polynomial coefficients
@@ -53,17 +40,10 @@ public:
     typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
 
     void operator()(ADvector &fg, const ADvector &vars) {
-        // TODO: implement MPC
         // fg a vector of constraints, x is a vector of constraints.
-        // NOTE: You'll probably go back and forth between this function and
-        // the Solver function below.
-        // The cost is stored is the first element of `fg`.
-        // Any additions to the cost should be added to `fg[0]`.
         fg[0] = 0;
 
         // Reference State Cost
-        // TODO: Define the cost related the reference state and
-        // any anything you think may be beneficial.
         for (int t = 0; t < N; t++) {
             // cte error
             fg[0] += scale_cte* CppAD::pow(vars[cte_start + t], 2);
@@ -196,9 +176,6 @@ public:
         // object that computes objective and constraints
         FG_eval fg_eval(coeffs);
 
-        //
-        // NOTE: You don't have to worry about these options
-        //
         // options for IPOPT solver
         std::string options;
         // Uncomment this if you'd like more print information
@@ -229,7 +206,6 @@ public:
         auto cost = solution.obj_value;
         std::cout << "Cost " << cost << std::endl;
 
-        // TODO: Return the first actuator values. The variables can be accessed with
         vector<double> result{solution.x[delta_start], solution.x[a_start]};
         for (int i = 0; i<2*N; i++){
             result.push_back(solution.x[x_start+i]);
