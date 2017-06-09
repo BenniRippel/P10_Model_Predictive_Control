@@ -118,7 +118,7 @@ epsi=-atan(f'(x=0))=-atan(coeffs[1])
 The current states x,y and psi are 0 due to the coordinate system. The value of v is calculated as follows, using the 
 throttle value as a scaling factor of the current longitudinal acceleration:
 
-v_pred = v + throttle*9.81*latency;
+v_pred = v + throttle * 9.81 * latency;
 
 
 ## Model Predictive Control with Latency
