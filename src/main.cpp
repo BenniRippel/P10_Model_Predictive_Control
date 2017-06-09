@@ -94,31 +94,36 @@ int main() {
           double steering = j[1]["steering_angle"];
           v *= 0.44704; // in m/s
 
-          // convert ptsx and ptsy to car coordinate system
+
+          // predict px, py, psi after latency
+          double latency = 0.1;
+          const double Lf = 2.67;
+
+          double px_pred = px + v*std::cos(psi)*latency;
+          double py_pred = py + v*std::sin(psi)*latency;
+          double psi_pred = psi - v/Lf * latency*steering;
+           std::cout<<"PX pred: "<< px_pred-px<<" PY pred: "<<py_pred-py << " psi_pred: "<<psi_pred-psi<<std::endl;
+
+          // convert ptsx and ptsy to car coordinate system for predicted px and py
           Eigen::VectorXd ptsx_cc(ptsx.size());
           Eigen::VectorXd ptsy_cc(ptsy.size());
           for (int i=0; i<ptsx.size(); i++){
-              double x = ptsx[i]-px;
-              double y = ptsy[i]-py;
-              ptsx_cc[i] = x*std::cos(-psi)-y*std::sin(-psi);
-              ptsy_cc[i] = x*std::sin(-psi)+y*std::cos(-psi);
+              double x = ptsx[i]-px_pred;
+              double y = ptsy[i]-py_pred;
+              ptsx_cc[i] = x*std::cos(-psi_pred)-y*std::sin(-psi_pred);
+              ptsy_cc[i] = x*std::sin(-psi_pred)+y*std::cos(-psi_pred);
           }
 
-          // fit a 3rd order polynomial to the above ptsx_cc and ptsy_cc coordinates
+          // fit a 3rd order polynomial to the above ptsx_cc and ptsy_cc coordinates (in predicted car position coordinate system)
           auto coeffs = polyfit(ptsx_cc, ptsy_cc, 3);
-          // predict state to account for latency
-          double latency = 0.1;
-          double Lf = 2.67;
-          double x_pred =v*latency;
-          double psi_pred=-v*steering*latency/Lf;
           // calculate the cross track error
-          double cte = polyeval(coeffs, x_pred);
+          double cte = polyeval(coeffs, 0);
           // calculate the orientation error
-          double epsi = -atan(coeffs[1]+2*coeffs[2]*x_pred+3*coeffs[3]*x_pred*x_pred);
+          double epsi = -atan(coeffs[1]);
 
-          // define state after passed latency
+          // define state after passed latency in predicted coordinate system
           Eigen::VectorXd state(6);
-          state << x_pred, 0, psi_pred, v, cte, epsi;
+          state << 0, 0, 0, v, cte, epsi;
 
           // solve
           auto solution = mpc.Solve(state, coeffs);

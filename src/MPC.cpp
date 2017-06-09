@@ -5,15 +5,15 @@
 
 using CppAD::AD;
 
-size_t N = 20;
+size_t N = 15;
 double dt = 0.1;
 
 double scale_delta = 400;
 double scale_cte = 1;
-double scale_delta_diff = 500;
+double scale_delta_diff = 1000;
 double scale_a_diff=1;
 
-double ref_v=70*0.44704;
+double ref_v=75*0.44704;
 
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
