@@ -13,7 +13,7 @@ double scale_cte = 1;
 double scale_delta_diff = 1000;
 double scale_a_diff=1;
 
-double ref_v=75*0.44704;
+double ref_v=80*0.44704;
 
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;

@@ -92,17 +92,17 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
           double steering = j[1]["steering_angle"];
+          double throttle = j[1]["throttle"];
           v *= 0.44704; // in m/s
 
 
-          // predict px, py, psi after latency
+          // predict vehicle state in global coordinates after latency
           double latency = 0.1;
           const double Lf = 2.67;
-
           double px_pred = px + v*std::cos(psi)*latency;
           double py_pred = py + v*std::sin(psi)*latency;
           double psi_pred = psi - v/Lf * latency*steering;
-           std::cout<<"PX pred: "<< px_pred-px<<" PY pred: "<<py_pred-py << " psi_pred: "<<psi_pred-psi<<std::endl;
+          double v_pred = v + throttle*9.81*latency;
 
           // convert ptsx and ptsy to car coordinate system for predicted px and py
           Eigen::VectorXd ptsx_cc(ptsx.size());
@@ -123,7 +123,7 @@ int main() {
 
           // define state after passed latency in predicted coordinate system
           Eigen::VectorXd state(6);
-          state << 0, 0, 0, v, cte, epsi;
+          state << 0, 0, 0, v_pred, cte, epsi;
 
           // solve
           auto solution = mpc.Solve(state, coeffs);

@@ -4,22 +4,128 @@ Self-Driving Car Engineer Nanodegree Program
 
 ## Project Introduction
 
-## Used Model
-Student describes their model in detail. This includes the state, actuators and update equations.
+Model Predictive Control is a method for predictive control of a complex process. An optimizer is used to find the control 
+inputs minimizing a well defined cost function. I this case, it is used to find the control 
+inputs (steering and throttle/brake) to follow waypoints along a track in a simulator.
+ 
+In general, the algorithm consists of the following steps:
 
-## Parameters
-Timestep Length and Elapsed Duration (N & dt)
-Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values. 
-Additionally the student details the previous values tried.
+Setup:
+
+- define horizon (length of trajectory N and duration of timestep dt)
+- define constraints (actuator and vehicle dynamics)
+- define a cost function 
+
+Apply at each time step (loop):
+
+- pass current state to the controller
+- solve optimization problem using a solver that minimizes the cost function and returns a vector of N-1 control inputs
+- pass the control inputs for the next timestep to the according actuators (steering/throttle)
+    
+
+## Used Model
+
+A kinematic model which ignores tire forces, gravity and mass is used. It is accurate enough for low 
+longitudinal and lateral accelerations. 
+
+The following vehicle states are represented:
+
+states = [x, y, psi, v, cte, epsi]
+
+with:
+
+|state|description|
+|---|---|
+|x | position in x-direction|
+|y | position in y-direction|
+|psi | orientation|
+|v | velocity|
+|cte| cross track error|
+|epsi| orientation error|
+ 
+
+The following actuators are used to control the vehicle
+
+actuators = [delta, a] 
+
+with: 
+
+
+|actuator|description|limits|
+|---|---|---|
+|delta | steering angle| [-25°, 25°] |
+|a | throttle/brake | [-1, 1]|
+
+The unitless values of a are not directly linked to the cars acceleration. Ignoring the vehicle dynamics (engine dynamics, mass etc.), a can be seen as
+ the desired acceleration in g.
+
+The folloing equations describe the kinematic model:
+
+x_t+1 = x_t + v_t*cos(psi_t)*dt
+
+y_t+1 = y_t + v_t*sin(psi_t)*dt
+
+psi_t+1 = psi_t + v_t/L_f * delta_t * dt
+
+v_t+1 = v_t + a_t*dt
+
+cte_t+1 = y_desired_t - y_t + (v_t * sin(epsi_t)*dt)
+
+epsi_t+1 = psi_t - psi_desired_t + (v_t/L_f * delta_t * dt)
+
+
+where: 
+
+- L_​f​​  measures the distance between the front axle of the vehicle and its center of gravity
+- y_desired_t is the current desired lateral position on the track
+- psi_desired_t is the current desired orientation
+
+
+## Horizon Parameters
+
+When applying MPC, the horizon parameters have to be set. They include the length of trajectory N and duration of timestep dt.
+To minimize the discretization error, dt should be small, especially when driving with high speeds. The length of the trajectory 
+should be adjusted for a maximum prediction horizon of a few seconds at most. Additionally, the computational load has to be taken into
+ account, which increases with N.
+
+The following parameters where chosen, which lead to a stable solution for a velocity of 75 mph.
+  
+|parameter|value|
+|---|---|
+|N|15|
+|dt|0.1s|
+
+If N is increased to 20 or higher, while dt stays at 0.1s, the predicted trajectory exceeds the last waypoints. Consequently, 
+the fitted 3rd order polynomial is extrapolated and hence may lead to unstable solutions of the MPC solver. Decreasing N to 10 still works fine, 
+while decreasing to even lower values leads to unstable behaviour with nonsense actuator inputs.
+ 
+Increasing the time step dt to 0.2s with N at 15 leads to a prediction horizon of 3s, which is to large for a speed of 75 
+mph and higher. Consequently, the solution is not stable. A dt of 0.05s leads to a very short predicted trajectory and 
+consequently to a oscillating car.
+ 
+To put it in a nutshell, a dt of 0.1s with N within the interval [10, 15], leading to a prediction horizon of 1s or 1,5s works best. 
+
 
 ## Polynomial Fitting and MPC Preprocessing
-A polynomial is fitted to waypoints.
 
-If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.
+For easy calculation of the cross-track-error and the orientation error, the waypoints are transformed to the cars 
+coordinate system at the cars position after the latency has passed. Afterwards, a 3rd order polynomial is fitted to these waypoints.
+To calculate the cte, the resulting polynomial is evaluated at the current position of the car (x=0). The orientation error
+is calculated by 
+
+epsi=-atan(f'(x=0))=-atan(coeffs[1])
+
+The current states x,y and psi are 0 due to the coordinate system. The value of v is calculated as follows, using the 
+throttle value as a scaling factor of the current longitudinal acceleration:
+
+v_pred = v + throttle*9.81*latency;
+
 
 ## Model Predictive Control with Latency
-The student implements Model Predictive Control that handles a 100 millisecond latency. Student provides details on how 
-they deal with latency.
+To deal with actuation latency, the cars state in global coordinates is predicted for t+=latency 
+using the kinematic model. This new predicted state is used as the origin of the car coordinate system, which in 
+turn is used as reference to fit the waypoints and calculate the cross-track-error and orientation error.
+Hence, the actuator latency is taken into account when solving for the optimal actuator inputs.
 
 ## Dependencies
 
